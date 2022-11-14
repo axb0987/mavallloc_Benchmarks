@@ -1,0 +1,102 @@
+#include "mavalloc.h"
+#include <stdio.h>
+#include <string.h>
+#include <time.h>
+#include <unistd.h>
+#include <stdlib.h>
+
+void test() {
+	clock_t start, end;
+
+	start = clock();
+
+	//Test 5
+	char* ptr = malloc(80);
+	free(ptr);
+	//Test 6
+
+	char* ptr1 = malloc(2000);	//2000 -> 8000
+	char* ptr2 = malloc(1000);	//2000 -> 1000 -> 7000
+	char* ptr3 = malloc(3000);	//2000 -> 1000 -> 3000 -> 4000
+	free(ptr2);				//2000 -> 1000(H) -> 3000 -> 4000
+	char* ptr4 = malloc(2000);	//2000 -> 1000 -> 3000 -> 2000 -> 2000
+	char* ptr5 = malloc(400);	//2000 -> 400 -> 600 -> 3000 -> 2000 -> 2000
+	char* ptr6 = malloc(800);	//2000 -> 400 -> 600 -> 3000 -> 2000 -> 800 -> 1200
+	char* ptr7 = malloc(200);	//2000 -> 400 -> 600 -> 3000 -> 2000 -> 800 -> 1200
+	char* ptr8 = malloc(600);
+	ptr = malloc(1000);	//2000 -> 400 -> 600 -> 3000 -> 2000 -> 800 -> 1200
+	free(ptr1);
+	free(ptr3);
+	free(ptr4);
+	free(ptr5);
+	free(ptr6);
+	free(ptr7); 
+	free(ptr8);
+	free(ptr);
+
+	//Test 10 for BEST_FIT
+	mavalloc_init(5000, NEXT_FIT);
+
+	ptr1 = malloc(500);	//500 -> 4500
+	ptr4 = malloc(1000);	//500 -> 1000 -> 3500
+	ptr3 = malloc(2000);	//500 -> 1000 -> 2000 -> 1500
+	ptr2 = malloc(1100);	//500 -> 1000 -> 2000 -> 1100 -> 400
+	mavalloc_free(ptr1);				//500H-> 1000 -> 2000 -> 1100 -> 400
+	ptr5 = malloc(400);	//500H-> 1000 -> 2000 -> 1100 -> 400
+	mavalloc_free(ptr3);				//500H-> 1000 -> 2000H-> 1100 -> 400
+
+	ptr6 = malloc(1000);	//500H-> 1000 -> 1000 -> 1000H -> 1100 -> 400
+	mavalloc_free(ptr4);				//1500H -> 1000 -> 1000H -> 1100 -> 400 
+	ptr7 = malloc(1000);	//1500H -> 1000 -> 1000 -> 1100 -> 400 
+	ptr8 = malloc(1000);	//1000 ->500H -> 1000 -> 1000 -> 1100 -> 400 
+	
+	free(ptr2);
+	free(ptr5);
+	free(ptr6);
+	free(ptr7);
+	free(ptr8);
+
+	//Test 11 
+	mavalloc_init(10000, NEXT_FIT);
+
+	ptr5 = malloc(2000);	//2 -> 8
+	ptr2 = malloc(3000);	//2 -> 3 -> 5
+	ptr6 = malloc(4000);	//2 -> 3 -> 4 -> 1
+	ptr7 = malloc(500);		//2 -> 3 -> 4 -> 500 -> 500H
+	free(ptr5);			//2000H -> 3 -> 4 -> 500 -> 500H
+	free(ptr6);			//2000H -> 3 -> 4000H -> 500 -> 500H
+	ptr1 = malloc(2000);	//2000H -> 3 -> 2000 -> 2000H -> 500 -> 500H
+	free(ptr7);			//2000H -> 3 -> 2000 -> 3000H
+	ptr3 = malloc(2000);	//2000H -> 3 -> 2000 -> 2000 -> 1000H
+	ptr4 = malloc(1000);	//1000 -> 1000H -> 3000 -> 2000 -> 2000 -> 1000H
+	ptr8 = malloc(1000);	//I do not remember if it would take the last node touched if they were equal so it works out
+	ptr = malloc(1000);	//1000 -> 1000 -> 3000 -> 2000 -> 2000 -> 1000 
+
+	free(ptr2);
+	free(ptr1);
+	free(ptr3);
+	free(ptr4);
+	free(ptr8);
+	free(ptr);
+
+	ptr8 = malloc(200);
+	free(ptr8);
+	ptr = malloc(200);
+	free(ptr);
+
+	end = clock();
+
+	double duration = 1000 * ((double)end - start) / CLOCKS_PER_SEC;
+	printf("%f\n", duration);
+
+}
+
+int main(int argc, char* argv[])
+{
+	sleep(4);
+	for (int i = 0; i < 90; i++) {
+		test();
+	}
+	return 0;
+
+}

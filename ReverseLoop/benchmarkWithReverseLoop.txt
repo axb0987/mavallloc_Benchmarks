@@ -1,0 +1,183 @@
+#include "mavalloc.h"
+#include <stdio.h>
+#include <string.h>
+#include <time.h>
+#include <unistd.h>
+
+void test() {
+	clock_t start, end;
+
+	start = clock();
+	char* arr[5000];
+
+	///Test 1
+	mavalloc_init(40000, NEXT_FIT);
+
+	for (int i = 0; i < 5000; i++) {
+		arr[i] = mavalloc_alloc(8);
+	}
+
+	char c = 'A';
+
+	for (int i = 0; i < 5000; i++) {
+		memset(arr[i], c, 7);
+		//printf("%s\t", arr[i]);
+		c++;
+		if (c == 91) {
+			c = 65;
+		}
+	}
+	mavalloc_destroy();
+
+	//Test 2
+	mavalloc_init(20000, NEXT_FIT);
+	c = 'a';
+
+	for (int i = 4999; i > -1; i--) {
+		if ((i % 4) == 2) {
+			arr[i] = mavalloc_alloc(4);
+
+			memset(arr[i], c, 3);
+			c++;
+			if (c == 123) {
+				c = 97;
+			}
+		}
+	}
+
+
+	for (int i = 4999; i > -1; i--) {
+		if ((i % 4) == 0) {
+			arr[i] = mavalloc_alloc(4);
+			memset(arr[i], '^', 3);
+		}
+	}
+
+	for (int i = 4999; i > -1; i--) {
+		if ((i % 2) == 1) {
+			arr[i] = mavalloc_alloc(4);
+			memset(arr[i], c, 3);
+			//printf("%s\t", arr[i]);
+			c++;
+			if (c == 123) {
+				c = 97;
+			}
+		}
+	}
+
+
+	mavalloc_destroy();
+
+	//Test 3
+	mavalloc_init(80000, NEXT_FIT);
+	for (int i = 0; i < 5000; i++) {
+		arr[i] = mavalloc_alloc(16);
+		strcpy(arr[i], "WE LOVE CSE3320");
+	}
+
+
+
+
+	mavalloc_destroy();
+
+	//Test 4
+	mavalloc_init(80000, NEXT_FIT);
+
+
+	for (int i = 0; i < 5000; i++) {
+		arr[i] = mavalloc_alloc(8);
+		memset(arr[i], '$', 7);
+	}
+
+
+	mavalloc_destroy();
+
+	
+	//Test 5
+	mavalloc_init(80, NEXT_FIT);
+	char* ptr = mavalloc_alloc(80);
+	mavalloc_destroy();
+
+	//Test 6
+	mavalloc_init(10000, NEXT_FIT);
+
+	char* ptr1 = mavalloc_alloc(2000);	//2000 -> 8000
+	char* ptr2 = mavalloc_alloc(1000);	//2000 -> 1000 -> 7000
+	char* ptr3 = mavalloc_alloc(3000);	//2000 -> 1000 -> 3000 -> 4000
+	mavalloc_free(ptr2);				//2000 -> 1000(H) -> 3000 -> 4000
+	char* ptr4 = mavalloc_alloc(2000);	//2000 -> 1000 -> 3000 -> 2000 -> 2000
+	char* ptr5 = mavalloc_alloc(400);	//2000 -> 400 -> 600 -> 3000 -> 2000 -> 2000
+	char* ptr6 = mavalloc_alloc(800);	//2000 -> 400 -> 600 -> 3000 -> 2000 -> 800 -> 1200
+	char* ptr7 = mavalloc_alloc(200);	//2000 -> 400 -> 600 -> 3000 -> 2000 -> 800 -> 1200
+	char* ptr8 = mavalloc_alloc(600);
+	char* ptr9 = mavalloc_alloc(1000);	//2000 -> 400 -> 600 -> 3000 -> 2000 -> 800 -> 1200
+
+	mavalloc_destroy();
+
+	//Test 7
+	mavalloc_init(1000, NEXT_FIT);
+	for (int i = 0; i < 100; i++) {
+		arr[i] = mavalloc_alloc(10);
+	}
+
+	mavalloc_destroy();
+
+	//Test 8
+	mavalloc_init(100, NEXT_FIT);
+	for (int i = 0; i < 5000; i++) {
+		arr[i] = mavalloc_alloc(0);
+	}
+
+	mavalloc_destroy();
+	
+	//Test 10 for BEST_FIT
+	mavalloc_init(5000, NEXT_FIT);
+
+	ptr1 = mavalloc_alloc(500);	//500 -> 4500
+	ptr2 = mavalloc_alloc(1000);	//500 -> 1000 -> 3500
+	ptr3 = mavalloc_alloc(2000);	//500 -> 1000 -> 2000 -> 1500
+	ptr4 = mavalloc_alloc(1100);	//500 -> 1000 -> 2000 -> 1100 -> 400
+	mavalloc_free(ptr1);				//500H-> 1000 -> 2000 -> 1100 -> 400
+	ptr5 = mavalloc_alloc(400);	//500H-> 1000 -> 2000 -> 1100 -> 400
+	mavalloc_free(ptr3);				//500H-> 1000 -> 2000H-> 1100 -> 400
+
+	ptr6 = mavalloc_alloc(1000);	//500H-> 1000 -> 1000 -> 1000H -> 1100 -> 400
+	mavalloc_free(ptr2);				//1500H -> 1000 -> 1000H -> 1100 -> 400 
+	ptr7 = mavalloc_alloc(1000);	//1500H -> 1000 -> 1000 -> 1100 -> 400 
+	ptr8 = mavalloc_alloc(1000);	//1000 ->500H -> 1000 -> 1000 -> 1100 -> 400 
+			
+	mavalloc_destroy();
+	//Test 11 
+	mavalloc_init(10000, NEXT_FIT);
+
+	ptr1 = mavalloc_alloc(2000);	//2 -> 8
+	ptr2 = mavalloc_alloc(3000);	//2 -> 3 -> 5
+	ptr3 = mavalloc_alloc(4000);	//2 -> 3 -> 4 -> 1
+	ptr4 = mavalloc_alloc(500);		//2 -> 3 -> 4 -> 500 -> 500H
+	mavalloc_free(ptr1);			//2000H -> 3 -> 4 -> 500 -> 500H
+	mavalloc_free(ptr3);			//2000H -> 3 -> 4000H -> 500 -> 500H
+	ptr5 = mavalloc_alloc(2000);	//2000H -> 3 -> 2000 -> 2000H -> 500 -> 500H
+	mavalloc_free(ptr4);			//2000H -> 3 -> 2000 -> 3000H
+	ptr6 = mavalloc_alloc(2000);	//2000H -> 3 -> 2000 -> 2000 -> 1000H
+	ptr7 = mavalloc_alloc(1000);	//1000 -> 1000H -> 3000 -> 2000 -> 2000 -> 1000H
+	ptr8 = mavalloc_alloc(1000);	//I do not remember if it would take the last node touched if they were equal so it works out
+	ptr9 = mavalloc_alloc(1000);	//1000 -> 1000 -> 3000 -> 2000 -> 2000 -> 1000 
+
+	mavalloc_destroy();
+
+	end = clock();
+
+	double duration = 1000 * ((double)end - start) / CLOCKS_PER_SEC;
+	printf("%f\n", duration);
+
+}
+
+int main(int argc, char* argv[])
+{
+	sleep(4);
+	for (int i = 0; i < 90; i++) {
+		test();
+	}
+	return 0;
+
+}
